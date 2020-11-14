@@ -36,15 +36,15 @@ class PodKeeper:
         self.checking = threading.Event()
         self.waiter = threading.Event()
 
-    def destroy(self):
+    def destroy(self, signum, stackframe):
         self.stopping.set()
         self.waiter.set()
 
-    def reload(self):
+    def reload(self, signum, stackframe):
         self.reloading.set()
         self.waiter.set()
 
-    def check(self):
+    def check(self, signum, stackframe):
         self.checking.set()
         self.waiter.set()
 
