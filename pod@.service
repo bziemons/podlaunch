@@ -1,0 +1,18 @@
+[Unit]
+Description=Podman pod@%i
+Documentation=man:podman-generate-systemd(1)
+Wants=network.target
+After=network-online.target
+
+[Service]
+Type=simple
+Environment=PODMAN_SYSTEMD_UNIT=%n
+ExecStart=/usr/local/bin/podlaunch %i
+Restart=on-failure
+RestartSec=30s
+TimeoutStartSec=2min
+TimeoutStopSec=1min
+KillMode=none
+
+[Install]
+WantedBy=multi-user.target default.target
