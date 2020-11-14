@@ -1,2 +1,2 @@
 #!/bin/sh
-/usr/bin/env python3 $(dirname $0)/../lib/podlaunch/main.py $@
+exec env python3 $(dirname $0)/../lib/podlaunch/main.py $@
