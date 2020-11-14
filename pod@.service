@@ -6,10 +6,11 @@ After=network-online.target
 
 [Service]
 Type=notify
+NotifyAccess=all
 Environment=PODMAN_SYSTEMD_UNIT=%n
 ExecStart=/usr/local/bin/podlaunch %i
 Restart=always
-RestartSec=30s
+RestartSec=20s
 TimeoutStartSec=2min
 TimeoutStopSec=1min
 KillMode=none
