@@ -47,7 +47,6 @@ class PodKeeper:
         self.waiter.set()
 
     def check(self, signum, stackframe):
-        print("Check signal", signum, file=sys.stderr, flush=True)
         self.checking.set()
         self.waiter.set()
 
