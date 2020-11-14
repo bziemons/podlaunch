@@ -5,7 +5,7 @@ import sys
 import threading
 import traceback
 from datetime import datetime
-from signal import signal, SIGCHLD, SIGHUP, SIGINT, SIGTERM, setitimer, SIGALRM, ITIMER_REAL
+from signal import signal, SIGHUP, SIGINT, SIGTERM, setitimer, SIGALRM, ITIMER_REAL
 
 import click
 import sh
@@ -22,7 +22,7 @@ class PodKeeper:
         self.podnet_args = ("--network", network) if network else ()
         identifier_path = pathlib.PurePath(identifier)
         if len(identifier_path.parts) != 1:
-            raise ValueError(f"identifier has too many parts: {identifier_path}")
+            raise ValueError(f"identifier has path parts: {identifier_path}")
         self.podhome = pathlib.Path(SERVICES_BASE_PATH) / identifier_path
         if not self.podhome.exists():
             raise NotADirectoryError(f"pod home does not exist: {self.podhome}")
@@ -35,6 +35,7 @@ class PodKeeper:
         self.reloading = threading.Event()
         self.checking = threading.Event()
         self.waiter = threading.Event()
+        self.last_check = datetime.utcnow()
 
     def destroy(self, signum, stackframe):
         print("Destroy signal", signum, file=sys.stderr, flush=True)
@@ -52,8 +53,7 @@ class PodKeeper:
 
     def run(self):
         os.chdir(self.podhome)
-        last_check = datetime.utcnow()
-        print(f"Starting pod {self.podname} at {last_check}", file=sys.stderr, flush=True)
+        print(f"Starting pod {self.podname} at {self.last_check}", file=sys.stderr, flush=True)
         podman.play.kube(self.podyaml, *self.podnet_args)
         try:
             if 'NOTIFY_SOCKET' in os.environ:
@@ -62,32 +62,39 @@ class PodKeeper:
             while not self.stopping.is_set():
                 self.waiter.wait()
                 self.waiter.clear()
+
                 if self.checking.is_set():
                     self.checking.clear()
-                    new_timestamp = datetime.utcnow()
-                    inspect_command = podman.pod.inspect(self.podname)
-                    pod_description = json.loads(inspect_command.stdout)
-                    for container in pod_description["Containers"]:
-                        if container["State"] != "running":
-                            print(f"Container {container['Name']} exited", file=sys.stderr, flush=True)
-                            logs = podman.logs('--since', last_check.isoformat(), container['Name'])
-                            print(f"Log since last check:\n{logs}", file=sys.stderr, flush=True)
-                            self.stopping.set()
-                    last_check = new_timestamp
+                    self.check_pod()
 
                 if self.reloading.is_set():
                     self.reloading.clear()
-                    print("Reloading pod", self.podname, file=sys.stderr, flush=True)
-                    try:
-                        podman.pod.kill("--signal", "HUP", self.podname)
-                    except sh.ErrorReturnCode:
-                        print("Error reloading pod", file=sys.stderr, flush=True)
-                        traceback.print_exc()
+                    self.reload_pod()
 
         finally:
-            self.stop_sequence()
+            self.stop_pod()
 
-    def stop_sequence(self):
+    def reload_pod(self):
+        print("Reloading pod", self.podname, file=sys.stderr, flush=True)
+        try:
+            podman.pod.kill("--signal", "HUP", self.podname)
+        except sh.ErrorReturnCode:
+            print("Error reloading pod", file=sys.stderr, flush=True)
+            traceback.print_exc()
+
+    def check_pod(self):
+        new_timestamp = datetime.utcnow()
+        inspect_command = podman.pod.inspect(self.podname)
+        pod_description = json.loads(inspect_command.stdout)
+        for container in pod_description["Containers"]:
+            if container["State"] != "running":
+                print(f"Container {container['Name']} exited", file=sys.stderr, flush=True)
+                logs = podman.logs('--since', self.last_check.isoformat(), container['Name'])
+                print(f"Log since last check:\n{logs}", file=sys.stderr, flush=True)
+                self.stopping.set()
+        self.last_check = new_timestamp
+
+    def stop_pod(self):
         print("Stopping pod", self.podname, file=sys.stderr, flush=True)
         try:
             podman.pod.stop("-t", "19", self.podname)
