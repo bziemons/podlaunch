@@ -37,14 +37,17 @@ class PodKeeper:
         self.waiter = threading.Event()
 
     def destroy(self, signum, stackframe):
+        print("Destroy signal", file=sys.stderr, flush=True)
         self.stopping.set()
         self.waiter.set()
 
     def reload(self, signum, stackframe):
+        print("Reload signal", file=sys.stderr, flush=True)
         self.reloading.set()
         self.waiter.set()
 
     def check(self, signum, stackframe):
+        print("Check signal", file=sys.stderr, flush=True)
         self.checking.set()
         self.waiter.set()
 
