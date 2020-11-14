@@ -112,10 +112,10 @@ class PodKeeper:
 def main(network, identifier):
     keeper = PodKeeper(network, identifier)
 
-    signal(SIGCHLD, keeper.destroy)
     signal(SIGINT, keeper.destroy)
     signal(SIGTERM, keeper.destroy)
     signal(SIGHUP, keeper.reload)
+    signal(SIGCHLD, keeper.check)
     signal(SIGALRM, keeper.check)
     setitimer(ITIMER_REAL, 4.0, 10.0)
 
