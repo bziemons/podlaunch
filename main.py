@@ -54,7 +54,9 @@ class PodKeeper:
         print(f"Starting pod {self.podname} at {last_check}", file=sys.stderr, flush=True)
         podman.play.kube(self.podyaml, *self.podnet_args)
         try:
-            sdnotify("--ready")
+            if 'NOTIFY_SOCKET' in os.environ:
+                sdnotify("--ready")
+
             while not self.stopping.is_set():
                 self.waiter.wait()
                 self.waiter.clear()
