@@ -66,9 +66,10 @@ class PodKeeper:
                     pod_description = json.loads(podman.pod.inspect(self.podname))
                     for container in pod_description["Containers"]:
                         if container["State"] != "running":
-                            print(f"Container {container['name']} exited", file=sys.stderr, flush=True)
-                            print(f"Log since last check:\n{podman.logs('--since', last_check.isoformat(), container['name'])}", file=sys.stderr, flush=True)
-                            self.destroy()
+                            print(f"Container {container['Name']} exited", file=sys.stderr, flush=True)
+                            logs = podman.logs('--since', last_check.isoformat(), container['Name'])
+                            print(f"Log since last check:\n{logs}", file=sys.stderr, flush=True)
+                            self.stopping.set()
                     last_check = new_timestamp
 
                 if self.reloading.is_set():
