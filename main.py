@@ -53,31 +53,33 @@ class PodKeeper:
         last_check = datetime.utcnow()
         print(f"Starting pod {self.podname} at {last_check}", file=sys.stderr, flush=True)
         podman.play.kube(self.podyaml, *self.podnet_args)
-        sdnotify("--ready")
-        while not self.stopping.is_set():
-            self.waiter.wait()
-            self.waiter.clear()
-            if self.checking.is_set():
-                self.checking.clear()
-                new_timestamp = datetime.utcnow()
-                pod_description = json.loads(podman.pod.inspect(self.podname))
-                for container in pod_description["Containers"]:
-                    if container["State"] != "running":
-                        print(f"Container {container['name']} exited", file=sys.stderr, flush=True)
-                        print(f"Log since last check:\n{podman.logs('--since', last_check.isoformat(), container['name'])}", file=sys.stderr, flush=True)
-                        self.destroy()
-                last_check = new_timestamp
+        try:
+            sdnotify("--ready")
+            while not self.stopping.is_set():
+                self.waiter.wait()
+                self.waiter.clear()
+                if self.checking.is_set():
+                    self.checking.clear()
+                    new_timestamp = datetime.utcnow()
+                    pod_description = json.loads(podman.pod.inspect(self.podname))
+                    for container in pod_description["Containers"]:
+                        if container["State"] != "running":
+                            print(f"Container {container['name']} exited", file=sys.stderr, flush=True)
+                            print(f"Log since last check:\n{podman.logs('--since', last_check.isoformat(), container['name'])}", file=sys.stderr, flush=True)
+                            self.destroy()
+                    last_check = new_timestamp
 
-            if self.reloading.is_set():
-                self.reloading.clear()
-                print("Reloading pod", self.podname, file=sys.stderr, flush=True)
-                try:
-                    podman.pod.kill("--signal", "HUP", self.podname)
-                except sh.ErrorReturnCode:
-                    print("Error reloading pod", file=sys.stderr, flush=True)
-                    traceback.print_exc()
+                if self.reloading.is_set():
+                    self.reloading.clear()
+                    print("Reloading pod", self.podname, file=sys.stderr, flush=True)
+                    try:
+                        podman.pod.kill("--signal", "HUP", self.podname)
+                    except sh.ErrorReturnCode:
+                        print("Error reloading pod", file=sys.stderr, flush=True)
+                        traceback.print_exc()
 
-        self.stop_sequence()
+        finally:
+            self.stop_sequence()
 
     def stop_sequence(self):
         print("Stopping pod", self.podname, file=sys.stderr, flush=True)
