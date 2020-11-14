@@ -66,7 +66,8 @@ class PodKeeper:
                 if self.checking.is_set():
                     self.checking.clear()
                     new_timestamp = datetime.utcnow()
-                    pod_description = json.loads(podman.pod.inspect(self.podname))
+                    inspect_command = podman.pod.inspect(self.podname)
+                    pod_description = json.loads(inspect_command.stdout)
                     for container in pod_description["Containers"]:
                         if container["State"] != "running":
                             print(f"Container {container['Name']} exited", file=sys.stderr, flush=True)
