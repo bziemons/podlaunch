@@ -54,7 +54,7 @@ class PodKeeper:
 
     def run(self):
         os.chdir(self.podhome)
-        if self.stop_previous and podman.pod.exists(self.podname).exit_code == 0:
+        if self.stop_previous and podman.pod.exists(self.podname, _ok_code=[0, 1]).exit_code == 0:
             print(f"Stopping pod {self.podname}", file=sys.stderr, flush=True)
             podman.pod.stop(self.podname)
 
