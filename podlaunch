@@ -1,2 +1,6 @@
 #!/bin/sh
-exec env python3 $(dirname $0)/../lib/podlaunch/main.py $@
+if [ -f "main.py" ]; then
+  exec env python3 main.py $@
+else
+  exec env python3 $(dirname $0)/../lib/podlaunch/main.py $@
+fi
