@@ -18,8 +18,9 @@ sdnotify = sh.Command("systemd-notify")
 
 
 class PodKeeper:
-    def __init__(self, network, identifier):
+    def __init__(self, network, stop_previous, identifier):
         self.podnet_args = ("--network", network) if network else ()
+        self.stop_previous = stop_previous
         identifier_path = pathlib.PurePath(identifier)
         if len(identifier_path.parts) != 1:
             raise ValueError(f"identifier has path parts: {identifier_path}")
@@ -53,6 +54,10 @@ class PodKeeper:
 
     def run(self):
         os.chdir(self.podhome)
+        if self.stop_previous and podman.pod.exists(self.podname).exit_code == 0:
+            print(f"Stopping pod {self.podname}", file=sys.stderr, flush=True)
+            podman.pod.stop(self.podname)
+
         print(f"Starting pod {self.podname} at {self.last_check}", file=sys.stderr, flush=True)
         podman.play.kube(self.podyaml, *self.podnet_args)
         try:
@@ -117,9 +122,10 @@ class PodKeeper:
 
 @click.command()
 @click.option("--network", default="brodge", help="Network for the created pod")
+@click.option("--stop-previous", default=True, help="Stop previously running pod with the same name")
 @click.argument("identifier")
-def main(network, identifier):
-    keeper = PodKeeper(network, identifier)
+def main(network, stop_previous, identifier):
+    keeper = PodKeeper(network, stop_previous, identifier)
 
     signal(SIGINT, keeper.destroy)
     signal(SIGTERM, keeper.destroy)
