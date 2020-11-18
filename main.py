@@ -57,7 +57,7 @@ class PodKeeper:
         podman.play.kube(self.podyaml, *self.podnet_args)
         try:
             if 'NOTIFY_SOCKET' in os.environ:
-                sdnotify("--ready", f"--pid={os.getpid()}", "--status=\"Monitoring pod...\"")
+                sdnotify("--ready", f"--pid={os.getpid()}", "--status=Monitoring pod...")
 
             while not self.stopping.is_set():
                 self.waiter.wait()
@@ -72,7 +72,7 @@ class PodKeeper:
                     self.reload_pod()
 
             if 'NOTIFY_SOCKET' in os.environ:
-                sdnotify("--status=\"Stopping pod\"")
+                sdnotify("--status=Stopping pod")
         finally:
             self.stop_pod()
 
