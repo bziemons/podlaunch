@@ -5,7 +5,8 @@ import sys
 import threading
 import traceback
 from datetime import datetime
-from signal import signal, SIGHUP, SIGINT, SIGTERM, setitimer, SIGALRM, ITIMER_REAL
+from queue import SimpleQueue
+from signal import signal, SIGHUP, SIGINT, SIGTERM, setitimer, SIGALRM, ITIMER_REAL, SIGUSR1, SIGUSR2, strsignal
 
 import click
 import sh
@@ -37,6 +38,8 @@ class PodKeeper:
         self.checking = threading.Event()
         self.waiter = threading.Event()
         self.last_check = datetime.utcnow()
+        self.passing_signal = threading.Event()
+        self.pass_signal_nums = SimpleQueue()
 
     def destroy(self, signum, stackframe):
         print("Destroy signal", signum, file=sys.stderr, flush=True)
@@ -50,6 +53,11 @@ class PodKeeper:
 
     def check(self, signum, stackframe):
         self.checking.set()
+        self.waiter.set()
+
+    def passthrough(self, signum, stackframe):
+        self.pass_signal_nums.put(item=signum, block=True, timeout=3)
+        self.passing_signal.set()
         self.waiter.set()
 
     def run(self):
@@ -68,25 +76,31 @@ class PodKeeper:
                 self.waiter.wait()
                 self.waiter.clear()
 
+                if self.passing_signal.is_set():
+                    self.passing_signal.clear()
+                    while not self.pass_signal_nums.empty():
+                        signum = self.pass_signal_nums.get(block=True, timeout=2)
+                        self.signal_pod(signum)
+
                 if self.checking.is_set():
                     self.checking.clear()
                     self.check_pod()
 
                 if self.reloading.is_set():
                     self.reloading.clear()
-                    self.reload_pod()
+                    self.signal_pod(SIGHUP)
 
             if 'NOTIFY_SOCKET' in os.environ:
                 sdnotify("--status=Stopping pod")
         finally:
             self.stop_pod()
 
-    def reload_pod(self):
-        print("Reloading pod", self.podname, file=sys.stderr, flush=True)
+    def signal_pod(self, signum):
+        print(f"Sending signal '{strsignal(signum)}' to pod {self.podname}", file=sys.stderr, flush=True)
         try:
-            podman.pod.kill("--signal", "HUP", self.podname)
+            podman.pod.kill("--signal", str(signum), self.podname)
         except sh.ErrorReturnCode:
-            print("Error reloading pod", file=sys.stderr, flush=True)
+            print("Error signaling pod", file=sys.stderr, flush=True)
             traceback.print_exc()
 
     def check_pod(self):
@@ -131,6 +145,8 @@ def main(network, stop_previous, identifier):
     signal(SIGTERM, keeper.destroy)
     signal(SIGHUP, keeper.reload)
     signal(SIGALRM, keeper.check)
+    signal(SIGUSR1, keeper.passthrough)
+    signal(SIGUSR2, keeper.passthrough)
     setitimer(ITIMER_REAL, 4.0, 10.0)
 
     keeper.run()
