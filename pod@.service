@@ -3,6 +3,8 @@ Description=Podman pod@%i
 Documentation=man:podman-generate-systemd(1)
 Wants=network.target
 After=network-online.target
+StartLimitIntervalSec=150s
+StartLimitBurst=3
 
 [Service]
 Type=notify
