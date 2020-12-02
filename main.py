@@ -19,9 +19,9 @@ sdnotify = sh.Command("systemd-notify")
 
 
 class PodKeeper:
-    def __init__(self, network, stop_previous, identifier):
+    def __init__(self, network, replace, identifier):
         self.podnet_args = ("--network", network) if network else ()
-        self.stop_previous = stop_previous
+        self.replace = replace
         identifier_path = pathlib.PurePath(identifier)
         if len(identifier_path.parts) != 1:
             raise ValueError(f"identifier has path parts: {identifier_path}")
@@ -62,7 +62,7 @@ class PodKeeper:
 
     def run(self):
         os.chdir(self.podhome)
-        if self.stop_previous and podman.pod.exists(self.podname, _ok_code=[0, 1]).exit_code == 0:
+        if self.replace and podman.pod.exists(self.podname, _ok_code=[0, 1]).exit_code == 0:
             print(f"Replacing existing pod {self.podname}", file=sys.stderr, flush=True)
             podman.pod.stop(self.podname)
             podman.pod.rm("-f", self.podname)
@@ -137,10 +137,10 @@ class PodKeeper:
 
 @click.command()
 @click.option("--network", default="brodge", help="Network for the created pod")
-@click.option("--stop-previous", default=True, help="Stop previously running pod with the same name")
+@click.option("--replace", default=True, help="Replace previously running pod with the same name")
 @click.argument("identifier")
-def main(network, stop_previous, identifier):
-    keeper = PodKeeper(network, stop_previous, identifier)
+def main(network, replace, identifier):
+    keeper = PodKeeper(network, replace, identifier)
 
     signal(SIGINT, keeper.destroy)
     signal(SIGTERM, keeper.destroy)
