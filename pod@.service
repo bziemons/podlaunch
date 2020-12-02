@@ -9,6 +9,7 @@ Type=notify
 NotifyAccess=main
 Environment=PODMAN_SYSTEMD_UNIT=%n
 ExecStart=/usr/local/bin/podlaunch %i
+ExecReload=/usr/bin/podman pod kill --signal HUP %i_pod
 Restart=always
 RestartSec=20s
 TimeoutStartSec=2min
