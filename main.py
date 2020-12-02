@@ -63,8 +63,9 @@ class PodKeeper:
     def run(self):
         os.chdir(self.podhome)
         if self.stop_previous and podman.pod.exists(self.podname, _ok_code=[0, 1]).exit_code == 0:
-            print(f"Stopping pod {self.podname}", file=sys.stderr, flush=True)
+            print(f"Replacing existing pod {self.podname}", file=sys.stderr, flush=True)
             podman.pod.stop(self.podname)
+            podman.pod.rm("-f", self.podname)
 
         print(f"Starting pod {self.podname} at {self.last_check}", file=sys.stderr, flush=True)
         podman.play.kube(self.podyaml, *self.podnet_args)
