@@ -4,7 +4,7 @@ import pathlib
 import sys
 import threading
 import traceback
-from datetime import datetime
+from datetime import datetime, timedelta
 from queue import SimpleQueue
 from signal import signal, SIGHUP, SIGINT, SIGTERM, setitimer, SIGALRM, ITIMER_REAL, SIGUSR1, SIGUSR2, strsignal
 
@@ -112,8 +112,9 @@ class PodKeeper:
         for container in pod_description["Containers"]:
             if container["State"] != "running":
                 print(f"Container {container['Name']} exited", file=sys.stderr, flush=True)
-                logs = podman.logs('--since', self.last_check.isoformat(), container['Name'])
-                print(f"Log since last check:\n{logs}", file=sys.stderr, flush=True)
+                logs_since = self.last_check - timedelta(seconds=10)
+                logs = podman.logs('--since', logs_since.isoformat(), container['Name'])
+                print(f"Log since last check (-10s):\n{logs}", file=sys.stderr, flush=True)
                 self.stopping.set()
         self.last_check = new_timestamp
 
