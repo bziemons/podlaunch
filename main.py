@@ -143,7 +143,7 @@ class PodKeeper:
 
 @click.command()
 @click.option("--network", default="brodge", help="Network for the created pod")
-@click.option("--log-driver", default="", help="Network for the created pod")
+@click.option("--log-driver", default="journald", help="Logging driver for the created pod")
 @click.option("--replace/--no-replace", default=True, help="Controls replacement of previously running pod with the "
                                                            "same name")
 @click.option("--remove/--keep", default=True, help="Controls removal of pod after stopping")
