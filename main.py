@@ -19,8 +19,10 @@ sdnotify = sh.Command("systemd-notify")
 
 
 class PodKeeper:
-    def __init__(self, network, replace, remove, identifier):
-        self.podnet_args = ("--network", network) if network else ()
+    def __init__(self, network, log_driver, replace, remove, identifier):
+        self.podnet_args = ()
+        self.podnet_args += ("--network", network) if network else ()
+        self.podnet_args += ("--log-driver", log_driver) if log_driver else ()
         self.replace = replace
         self.remove = remove
         identifier_path = pathlib.PurePath(identifier)
@@ -141,11 +143,13 @@ class PodKeeper:
 
 @click.command()
 @click.option("--network", default="brodge", help="Network for the created pod")
-@click.option("--replace/--no-replace", default=True, help="Controls replacement of previously running pod with the same name")
+@click.option("--log-driver", default="", help="Network for the created pod")
+@click.option("--replace/--no-replace", default=True, help="Controls replacement of previously running pod with the "
+                                                           "same name")
 @click.option("--remove/--keep", default=True, help="Controls removal of pod after stopping")
 @click.argument("identifier")
-def main(network, replace, remove, identifier):
-    keeper = PodKeeper(network, replace, remove, identifier)
+def main(network, log_driver, replace, remove, identifier):
+    keeper = PodKeeper(network, log_driver, replace, remove, identifier)
 
     signal(SIGINT, keeper.destroy)
     signal(SIGTERM, keeper.destroy)
