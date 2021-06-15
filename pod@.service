@@ -10,6 +10,8 @@ StartLimitBurst=5
 Type=notify
 NotifyAccess=main
 Environment=PODMAN_SYSTEMD_UNIT=%n
+LogExtraFields=POD=%i
+SyslogIdentifier=podlaunch@%i
 ExecStart=/usr/local/bin/podlaunch %i
 ExecReload=/usr/bin/podman pod kill --signal HUP %i_pod
 Restart=always
