@@ -9,12 +9,13 @@ from queue import SimpleQueue
 from signal import signal, SIGHUP, SIGINT, SIGTERM, setitimer, SIGALRM, ITIMER_REAL, SIGUSR1, SIGUSR2, strsignal
 
 import click
-import sh
+import sh as shex
 # noinspection PyUnresolvedReferences
 from sh import podman
 
 SERVICES_BASE_PATH = "/docker/services/"
 
+sh = shex(_out=sys.stdout, _err=sys.stderr)
 sdnotify = sh.Command("systemd-notify")
 
 
