@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 import pathlib
 import sys
@@ -9,13 +10,13 @@ from queue import SimpleQueue
 from signal import signal, SIGHUP, SIGINT, SIGTERM, setitimer, SIGALRM, ITIMER_REAL, SIGUSR1, SIGUSR2, strsignal
 
 import click
-import sh as shex
-# noinspection PyUnresolvedReferences
+import sh
 from sh import podman
 
 SERVICES_BASE_PATH = "/docker/services/"
 
-sh = shex(_out=sys.stdout, _err=sys.stderr)
+# noinspection PyCallingNonCallable
+shlog = sh(_out=sys.stdout, _err=sys.stderr)
 sdnotify = sh.Command("systemd-notify")
 
 
@@ -69,11 +70,11 @@ class PodKeeper:
         os.chdir(self.podhome)
         if self.replace and podman.pod.exists(self.podname, _ok_code=[0, 1]).exit_code == 0:
             print(f"Replacing existing pod {self.podname}", file=sys.stderr, flush=True)
-            podman.pod.stop(self.podname)
-            podman.pod.rm("-f", self.podname)
+            shlog.podman.pod.stop(self.podname)
+            shlog.podman.pod.rm("-f", self.podname)
 
         print(f"Starting pod {self.podname} at {self.last_check}", file=sys.stderr, flush=True)
-        podman.play.kube(self.podyaml, *self.podnet_args)
+        shlog.podman.play.kube(self.podyaml, *self.podnet_args)
         try:
             if 'NOTIFY_SOCKET' in os.environ:
                 sdnotify("--ready", f"--pid={os.getpid()}", "--status=Monitoring pod...")
@@ -104,7 +105,7 @@ class PodKeeper:
     def signal_pod(self, signum):
         print(f"Sending signal '{strsignal(signum)}' to pod {self.podname}", file=sys.stderr, flush=True)
         try:
-            podman.pod.kill("--signal", str(signum), self.podname)
+            shlog.podman.pod.kill("--signal", str(signum), self.podname)
         except sh.ErrorReturnCode:
             print("Error signaling pod", file=sys.stderr, flush=True)
             traceback.print_exc()
@@ -117,28 +118,28 @@ class PodKeeper:
             if container["State"] != "running":
                 print(f"Container {container['Name']} exited", file=sys.stderr, flush=True)
                 logs_since = self.last_check - timedelta(seconds=10)
-                logs = podman.logs('--since', logs_since.isoformat(), container['Name'])
-                print(f"Log since last check (-10s):\n{logs}", file=sys.stderr, flush=True)
+                print(f"Log since last check (-10s):\n", file=sys.stderr, flush=True)
+                shlog.podman.logs('--since', logs_since.isoformat(), container['Name'], _out=sys.stderr)
                 self.stopping.set()
         self.last_check = new_timestamp
 
     def stop_pod(self):
         print("Stopping pod", self.podname, file=sys.stderr, flush=True)
         try:
-            podman.pod.stop("-t", "19", self.podname)
+            shlog.podman.pod.stop("-t", "19", self.podname)
             successful_stopped = True
         except sh.ErrorReturnCode:
             print(f"First stop of {self.podname} was not successful!", file=sys.stderr, flush=True)
             successful_stopped = False
         try:
-            podman.pod.stop("-t", "5", self.podname)
+            shlog.podman.pod.stop("-t", "5", self.podname)
         except sh.ErrorReturnCode:
             if not successful_stopped:
                 print(f"Second stop of {self.podname} was not successful!", file=sys.stderr, flush=True)
 
         if self.remove:
             try:
-                podman.pod.rm(self.podname)
+                shlog.podman.pod.rm(self.podname)
             except sh.ErrorReturnCode:
                 print(f"Removal of {self.podname} was not successful!", file=sys.stderr, flush=True)
 
@@ -152,6 +153,8 @@ class PodKeeper:
 @click.option("--remove/--keep", default=True, help="Controls removal of pod after stopping")
 @click.argument("identifier")
 def main(network, log_driver, log_level, replace, remove, identifier):
+    logging.basicConfig(level=logging.INFO)
+
     keeper = PodKeeper(
         network=network,
         log_driver=log_driver,
