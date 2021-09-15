@@ -19,10 +19,11 @@ sdnotify = sh.Command("systemd-notify")
 
 
 class PodKeeper:
-    def __init__(self, network, log_driver, replace, remove, identifier):
+    def __init__(self, network, log_driver, log_level, replace, remove, identifier):
         self.podnet_args = ()
         self.podnet_args += ("--network", network) if network else ()
         self.podnet_args += ("--log-driver", log_driver) if log_driver else ()
+        self.podnet_args += ("--log-level", log_level) if log_level else ()
         self.replace = replace
         self.remove = remove
         identifier_path = pathlib.PurePath(identifier)
@@ -144,12 +145,20 @@ class PodKeeper:
 @click.command()
 @click.option("--network", default="brodge", help="Network for the created pod")
 @click.option("--log-driver", default="journald", help="Logging driver for the created pod")
+@click.option("--log-level", default="", help="Controls log-level on podman call")
 @click.option("--replace/--no-replace", default=True, help="Controls replacement of previously running pod with the "
                                                            "same name")
 @click.option("--remove/--keep", default=True, help="Controls removal of pod after stopping")
 @click.argument("identifier")
-def main(network, log_driver, replace, remove, identifier):
-    keeper = PodKeeper(network, log_driver, replace, remove, identifier)
+def main(network, log_driver, log_level, replace, remove, identifier):
+    keeper = PodKeeper(
+        network=network,
+        log_driver=log_driver,
+        log_level=log_level,
+        replace=replace,
+        remove=remove,
+        identifier=identifier
+    )
 
     signal(SIGINT, keeper.destroy)
     signal(SIGTERM, keeper.destroy)
