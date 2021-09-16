@@ -76,6 +76,10 @@ class PodKeeper:
         print(f"Starting pod {self.podname} at {self.last_check}", file=sys.stderr, flush=True)
         shlog.podman.play.kube(self.podyaml, *self.podnet_args)
         try:
+            shlogger = logging.getLogger("sh.command")
+            oldlevel = shlogger.level
+            shlogger.setLevel(logging.ERROR)
+
             if 'NOTIFY_SOCKET' in os.environ:
                 sdnotify("--ready", f"--pid={os.getpid()}", "--status=Monitoring pod...")
 
@@ -99,6 +103,8 @@ class PodKeeper:
 
             if 'NOTIFY_SOCKET' in os.environ:
                 sdnotify("--status=Stopping pod")
+
+            logging.getLogger("sh.command").setLevel(oldlevel)
         finally:
             self.stop_pod()
 
