@@ -16,9 +16,11 @@ ExecStart=/usr/local/bin/podlaunch %i
 ExecReload=/usr/bin/podman pod kill --signal HUP %i_pod
 Restart=always
 RestartSec=20s
-TimeoutStartSec=2min
+TimeoutStartSec=3min
 TimeoutStopSec=1min
 SendSIGKILL=no
+LogRateLimitIntervalSec=1h
+LogRateLimitBurst=1800
 
 [Install]
 WantedBy=multi-user.target default.target
