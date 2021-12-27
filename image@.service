@@ -10,7 +10,8 @@ Type=oneshot
 Environment=PODMAN_SYSTEMD_UNIT=%n
 LogExtraFields=IMAGE=%i
 ExecCondition=/usr/bin/bash -c '[[ $(podman images --format json localhost/%i | jq .\\[0\\]) == "null" ]]'
-ExecStart=/usr/bin/podman build --tag localhost/%i $EXTRAOPTS /docker/containers/%i
+Environment="IMAGE_TAG=localhost/%i" "BUILD_SOURCE=/docker/containers/%i"
+ExecStart=/usr/bin/podman build --tag ${IMAGE_TAG} $EXTRAOPTS ${BUILD_SOURCE}
 Restart=no
 RemainAfterExit=yes
 TimeoutStartSec=1h
