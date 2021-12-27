@@ -5,6 +5,9 @@ Wants=network.target
 After=network-online.target
 StartLimitIntervalSec=6h
 StartLimitBurst=5
+# To add a image dependency:
+#Wants=image@….service
+#After=image@….service
 
 [Service]
 Type=notify
