@@ -17,6 +17,8 @@ def resolve_image_units():
     services_list = list(map(lambda p: str(p.name), services_path.iterdir()))
     image_units: Set[str] = set()
 
+    logging.info(f"Found {len(services_list)} services: {str(services_list)}")
+
     def process_pod_systemctl_show(line: str):
         search_str = "Wants="
         if line.startswith(search_str):
@@ -61,11 +63,19 @@ def resolve_image_units():
             bar.length += len(new_image_units)
             previous_image_units = set(image_units)
 
+    logging.info(f"Found {len(image_units)} images: {str(image_units)}")
     return image_units
 
 
-def main():
-    logging.basicConfig(level=logging.CRITICAL)
+@click.command()
+@click.option("--verbose", is_flag=True, default=False, help="Enable INFO logging")
+def main(verbose):
+    if verbose:
+        loglevel = logging.INFO
+    else:
+        loglevel = logging.CRITICAL
+
+    logging.basicConfig(level=loglevel)
     image_units = resolve_image_units()
     image_tags: Set[str] = set()
 
