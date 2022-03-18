@@ -78,8 +78,10 @@ def main():
                     image_tags.add(unit[len(search_str) :])
 
     started_processes = []
-    with click.progressbar(image_units, label="Collecting container images..") as bar:
-        for image_service in bar:
+    with click.progressbar(
+        length=len(image_units), label="Collecting container images.."
+    ) as bar:
+        for image_service in image_units:
             process = systemctl.show(
                 image_service,
                 _out=process_image_systemctl_show,
@@ -92,9 +94,9 @@ def main():
 
     started_processes = []
     with click.progressbar(
-        image_tags, label="Untagging container images..", show_pos=True
+        length=len(image_tags), label="Untagging container images..", show_pos=True
     ) as bar:
-        for image_tag in bar:
+        for image_tag in image_tags:
             process = podman.untag(
                 image_tag,
                 _bg=True,
@@ -112,9 +114,9 @@ def main():
 
     started_processes = []
     with click.progressbar(
-        image_units, label="Building images..", show_pos=True
+        length=len(image_units), label="Building images..", show_pos=True
     ) as bar:
-        for image_service in bar:
+        for image_service in image_units:
             process = systemctl.restart(
                 image_service,
                 _bg=True,
